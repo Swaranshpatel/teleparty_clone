@@ -4,15 +4,15 @@ const cors = require("cors");
 const { Server } = require("socket.io");
 
 const app = express();
-app.use(cors());  // Allow all origins for HTTP requests
+app.use(cors()); // Allow all origins for HTTP requests
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*",  // Allow all origins for WebSocket connections
-    methods: ["GET", "POST"]
-  }
+    origin: "*", // Allow all origins for WebSocket connections
+    methods: ["GET", "POST"],
+  },
 });
 
 io.on("connection", (socket) => {
@@ -24,9 +24,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("video-event", (data) => {
-    // Broadcast to other clients in the room
-    const rooms = Array.from(socket.rooms).filter(r => r !== socket.id);
-    rooms.forEach(room => {
+    // Broadcast to other clients in the room except sender
+    const rooms = Array.from(socket.rooms).filter((r) => r !== socket.id);
+    rooms.forEach((room) => {
       socket.to(room).emit("video-event", data);
     });
   });
@@ -37,4 +37,17 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+console.log("Starting server on port:", PORT);
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+// Catch unhandled promise rejections and uncaught exceptions to avoid silent crashes
+process.on("unhandledRejection", (reason, p) => {
+  console.error("Unhandled Rejection at:", p, "reason:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception thrown:", err);
+  process.exit(1);
+});
