@@ -4,29 +4,31 @@ const cors = require("cors");
 const { Server } = require("socket.io");
 
 const app = express();
-app.use(cors());
+app.use(cors());  // Allow all origins for HTTP requests
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: "*",  // Allow all origins for WebSocket connections
     methods: ["GET", "POST"]
   }
 });
 
 io.on("connection", (socket) => {
-  console.log("New client connected");
+  console.log("Client connected");
 
   socket.on("join-room", (roomId) => {
     socket.join(roomId);
-    console.log(`Client joined room ${roomId}`);
+    console.log(`Client joined room: ${roomId}`);
   });
 
   socket.on("video-event", (data) => {
-    const roomId = Object.keys(socket.rooms).find(r => r !== socket.id);
-    if (roomId) {
-      socket.to(roomId).emit("video-event", data);
-    }
+    // Broadcast to other clients in the room
+    const rooms = Array.from(socket.rooms).filter(r => r !== socket.id);
+    rooms.forEach(room => {
+      socket.to(room).emit("video-event", data);
+    });
   });
 
   socket.on("disconnect", () => {
@@ -34,6 +36,5 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(process.env.PORT || 3000, () => {
-  console.log("Server is running...");
-});
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
