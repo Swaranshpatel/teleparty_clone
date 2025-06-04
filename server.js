@@ -4,13 +4,18 @@ const cors = require("cors");
 const { Server } = require("socket.io");
 
 const app = express();
-app.use(cors()); // Allow all origins for HTTP requests
+app.use(cors());
+
+// Health check endpoint for Railway
+app.get("/health", (req, res) => {
+  res.send("OK");
+});
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow all origins for WebSocket connections
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
@@ -24,7 +29,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("video-event", (data) => {
-    // Broadcast to other clients in the room except sender
     const rooms = Array.from(socket.rooms).filter((r) => r !== socket.id);
     rooms.forEach((room) => {
       socket.to(room).emit("video-event", data);
@@ -43,7 +47,14 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// Catch unhandled promise rejections and uncaught exceptions to avoid silent crashes
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received, shutting down gracefully");
+  server.close(() => {
+    console.log("Server closed");
+    process.exit(0);
+  });
+});
+
 process.on("unhandledRejection", (reason, p) => {
   console.error("Unhandled Rejection at:", p, "reason:", reason);
 });
